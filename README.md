@@ -176,22 +176,22 @@ results = model.train(data=data_yaml_path, epochs=10, imgsz=640)
  data_config = {
     'nc': 8,
     'names': ['Crosswalk', 'Traffic Light', 'regulatory', 'stop', 'warning', 'tree', 'sidewalk', 'Street_Light'],
-    'train': '/home/al921245/Documents/Training/combined_dataset/images/train',
-    'val': '/home/al921245/Documents/Training/combined_dataset/images/val'
+    'train': '<PATH TO YOUR TRAINING DATA>',
+    'val': '<PATH TO YOUR TESTING DATA>'
 }
   ```
 3. **Save Configuration File:** The configuration is saved to a `data.yaml` file, which is passed to the YOLOv8 training function:
   ```
-with open('/home/al921245/Documents/Training/combined_dataset/data.yaml', 'w') as yaml_file:
+with open('<FILE PATH TO SAVE TRAINING FUNCTION>/data.yaml', 'w') as yaml_file:
     yaml.dump(data_config, yaml_file, default_flow_style=False)
   ```
 
 ### Example  
   After running the script, the program will augment and combine datasets, then train YOLOv8 on the augmented data. Example console output:
   ```
-  Number of images in /home/al921245/Documents/Training/crosswalks-2/train: 1000
-  Number of images in /home/al921245/Documents/Training/trafic_lights_detection-1/train: 1000
-  Number of images in /home/al921245/Documents/Training/US-Road-Signs-72/train: 1000
+  Number of images in <FILE PATH TO TO YOUR SIDEWALK CROSSWALK DATASET>/train: 1000
+  Number of images in <FILE PATH TO TO YOUR SIDEWALK TRAFFIC LIGHT DATASET>/train: 1000
+  Number of images in <FILE PATH TO TO YOUR SIDEWALK TRAINING DATASET>/train: 1000
   ...
   Total number of images in the combined dataset: 6000
   Datasets combined, labels remapped, augmented, and split successfully!
