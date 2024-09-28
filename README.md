@@ -1,8 +1,9 @@
-# SenseRator2.0: YOLOv8 Object Detection and Tracking Project
+# SenseRator2.0: 
+## YOLOv8 Object Detection and Tracking Project
 
 This project utilizes a custom-trained YOLOv8 model for real-time object detection and tracking with video stream recording. The primary application is detecting various street-level objects (e.g., sidewalks, crosswalks, traffic lights, stop signs, etc.) and calculating safety-related indices to determine a **Pedestrian Flow Safety (PFS) index** based on detected objects.
 
-## Features
+### Features
 - **Object Detection and Tracking:**
   Detects and tracks multiple objects using a YOLOv8 model with ByteTrack for object tracking.
 - **Real-time Inference:**
@@ -12,7 +13,7 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
 - **Video Recording:**
    Records the video stream with object annotations and saves it to the `videos/` directory in `.mp4` format without overwriting previous recordings.
 
-## Requirements
+### Requirements
 - **Hardware:**
   - Jetson Nano or compatible device with a CSI camera.
 - **Software:**
@@ -23,7 +24,7 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
   - `opencv-python`
   - `numpy`
 
-## Installation
+### Installation
 
 1. **Install Dependencies:**  
    First, make sure you have the necessary Python dependencies:
@@ -41,7 +42,7 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
 4. **Prepare the YOLOv8 Model:**  
 Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project directory.
 
-## Usage  
+### Usage  
 
 1. **Running the Code:**
    
@@ -60,7 +61,7 @@ Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project direc
 3. **Pedestrian Flow Safety Index:**  
     After each run, the program will calculate and display the Pedestrian Flow Safety (PFS) index, along with individual indices for sidewalks, crosswalks, traffic lights, stop signs, trees, and street lights.
 
-## Code Structure
+### Code Structure
 
 - `frame_capture_thread():`  
   Captures frames from the camera in real-time and pushes them into a processing queue.
@@ -74,12 +75,12 @@ Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project direc
 - `compute_component_score():`  
   Calculates the score for each detected object category, contributing to the overall Pedestrian Flow Safety (PFS) index.
 
-## Output
+### Output
 
 - **Console Output:** The program prints the object counts, detection confidence scores, tracking IDs, and the final calculated safety indices.
 - **Video Output:** Annotated video streams with object bounding boxes and IDs are saved as `.mp4` files in the `videos/` directory.
 
-## Example
+### Example
 
   After running the program, the console output will display something like:
   
@@ -106,3 +107,102 @@ Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project direc
   ```
   
   The annotated video will be saved in the `videos/` folder.
+
+
+
+## Dataset Augmentation and YOLOv8 Training
+
+This script is the dataset augmentation pipeline and custom training setup for YOLOv8 models.   The script combines multiple datasets, remaps the labels, applies   augmentations, and prepares the data for YOLOv8 training.
+
+### Features
+- **Dataset Augmentation:**  
+  Applies a series of augmentations including horizontal flips, brightness/contrast adjustments, rotations, and blurs to increase the dataset size and variability.
+- **Label Remapping:**  
+  Automatically remaps the class indices of different datasets to a unified set of class labels for training YOLOv8.
+- **Data Combination and Splitting:**  
+  Combines datasets of different categories (e.g., crosswalks, traffic lights, stop signs, trees, etc.) and splits them into training and validation sets.
+- **Custom YOLOv8 Training:**  
+  Trains a YOLOv8 model on the combined and augmented datasets using the `ultralytics` YOLO framework.
+
+### Requirements
+- **Software:**  
+  - Python 3.8+
+  - `opencv-python`
+  - `albumentations`
+  - `scikit-learn`
+  - `ultralytics` (for YOLOv8)
+  - `numpy`
+  - `PyYAML`
+
+### Installation
+
+1. **Install Dependencies:**  
+   First, make sure you have the necessary Python dependencies:
+   ```
+   pip install opencv-python albumentations scikit-learn ultralytics numpy pyyaml
+   ```
+2. **Prepare Datasets:**  
+   Place your datasets in the correct paths as specified in the code. Each dataset should have `images/` and `labels/` directories inside their respective paths.
+
+### Usage
+#### Augmentation and Dataset Preparation  
+1. **Dataset Augmentation:** The following script will augment the selected images from each dataset by applying random transformations such as flips, brightness adjustments, and rotations. Example of augmenting and combining datasets:
+  ```
+  for dataset_info in datasets_info:
+    images, labels = select_and_augment_images(dataset_info, 1000, augment_factor=2)
+  ```
+2. **Remap Labels:** Each dataset might have a different label mapping. This code will remap the labels to a unified set of class indices based on the `class_mapping`.
+  ```
+  remap_labels(label_path, original_mapping)
+  ```
+3. **Combine and Split Datasets:** After augmentation, the dataset is combined and split into 80% training and 20% validation sets:
+  ```
+  train_images, val_images, train_labels, val_labels = train_test_split(combined_image_paths,  combined_label_paths, test_size=0.2, random_state=42)
+  ```
+4. **Save and Organize Combined Dataset:** The images and labels are copied to the `combined_dataset/` directory, with separate subdirectories for `train` and `val` data.
+  ```
+  copy_files(train_images, os.path.join(combined_images_dir, 'train'))
+copy_files(val_images, os.path.join(combined_images_dir, 'val'))
+  ```
+
+### Custom YOLOv8 Training
+1. **Train YOLOv8 Model:** train a YOLOv8 model on the prepared and combined dataset:
+  ```
+  model = YOLO('yolov8s.pt')
+results = model.train(data=data_yaml_path, epochs=10, imgsz=640)
+  ```
+2. **Configure Dataset for Training:** The dataset configuration is stored in a YAML file that specifies the class names, training, and validation paths:
+  ```
+ data_config = {
+    'nc': 8,
+    'names': ['Crosswalk', 'Traffic Light', 'regulatory', 'stop', 'warning', 'tree', 'sidewalk', 'Street_Light'],
+    'train': '/home/al921245/Documents/Training/combined_dataset/images/train',
+    'val': '/home/al921245/Documents/Training/combined_dataset/images/val'
+}
+  ```
+3. **Save Configuration File:** The configuration is saved to a `data.yaml` file, which is passed to the YOLOv8 training function:
+  ```
+with open('/home/al921245/Documents/Training/combined_dataset/data.yaml', 'w') as yaml_file:
+    yaml.dump(data_config, yaml_file, default_flow_style=False)
+  ```
+
+### Example  
+  After running the script, the program will augment and combine datasets, then train YOLOv8 on the augmented data. Example console output:
+  ```
+  Number of images in /home/al921245/Documents/Training/crosswalks-2/train: 1000
+  Number of images in /home/al921245/Documents/Training/trafic_lights_detection-1/train: 1000
+  Number of images in /home/al921245/Documents/Training/US-Road-Signs-72/train: 1000
+  ...
+  Total number of images in the combined dataset: 6000
+  Datasets combined, labels remapped, augmented, and split successfully!
+  data.yaml file created successfully!
+  ```
+  Training results will be displayed during the training process, including loss values and performance metrics.
+
+### Output
+- **Augmented Images:**
+  Augmented images are saved in the same directory as the original images with `_aug_N` appended to the filenames.
+- **Combined Dataset:**
+  The combined dataset is saved in the `combined_dataset/` directory, with separate directories for `train` and `val` images and labels.
+- **YOLOv8 Training Results:**
+  The YOLOv8 training results, including model weights and metrics, will be stored in the `runs/train` directory (default behavior of `ultralytics` library).
