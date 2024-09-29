@@ -7,7 +7,11 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
 - **Object Detection and Tracking:**
   Detects and tracks multiple objects using a YOLOv8 model with ByteTrack for object tracking.
 - **Real-time Inference:**
-   Processes video streams in real-time using the jetson_utils library for efficient handling of Jetson devices.
+   Processes video streams in real-time using the `jetson_utils` library for efficient handling of Jetson devices.
+- **Score Calculation:**
+   Computes safety-related indices based on the detected objects, providing insights into pedestrian safety.
+- **Video Recording:**
+   Records the video stream with object annotations and saves it to the `videos/` directory in `.mp4` format without overwriting previous recordings.devices.
 - **Score Calculation:**
    Computes safety-related indices based on the detected objects, providing insights into pedestrian safety.
 - **Video Recording:**
@@ -63,17 +67,36 @@ Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project direc
 
 ### Code Structure
 
-- `frame_capture_thread():`  
-  Captures frames from the camera in real-time and pushes them into a processing queue.
+- `camera = videoSource("csi://0", ...)` & `display = videoOutput("display://0"):`    
+  Initializes the camera feed from the CSI camera and sets up the display window for real-time video rendering.
+  
+- `frame_queue = queue.Queue(maxsize=4):`  
+  A queue is created to hold frames before sending them for inference. The `maxsize` ensures that frames are processed without overloading the system, and new frames are dropped if the queue is full.
   
 - `inference_thread():`  
-  Processes each frame using YOLOv8 for object detection and ByteTrack for object tracking. The tracking age and object counts are updated here.
+  Runs object detection and tracking on each frame taken from `frame_queue`. It resizes the frame for faster inference and processes the results using ByteTrack to maintain object tracking across frames. Tracked objects are stored, including their bounding boxes, class labels, and confidence scores. The track ages are managed to ensure that only sufficiently tracked objects are counted.
   
-- `display_thread():`  
-  Annotates the detected objects on the video frames, converts the frames to the correct RGB format, and writes them to the video file while displaying them in real-time.
+- `thread = threading.Thread(target=inference_thread, daemon=True):`  
+  Starts the inference thread in the background to handle detection and tracking concurrently with video rendering.
   
 - `compute_component_score():`  
-  Calculates the score for each detected object category, contributing to the overall Pedestrian Flow Safety (PFS) index.
+  Calculates a score for each detected object category (e.g., sidewalks, crosswalks, traffic lights) based on the number of objects detected. The scores contribute to the overall **Pedestrian Flow Safety (PFS) index.**
+  
+- `video_writer = cv2.VideoWriter(...):`  
+  Initializes the video writer to record the video stream to an `.mp4` file in the `videos/` directory. The filename includes a timestamp to prevent overwriting.
+  
+- `camera.Capture()` & `cudaToNumpy()`  
+  Captures frames from the camera feed and converts them from CUDA format to NumPy for further processing and rendering.
+  
+- **Main Loop** (`while display.IsStreaming()`):  
+  - Captures frames from the camera feed
+  - Adds frames to inference queue (if available space)
+  - Renders tracking results onto the frames (bounding boxes, labels, confidence scores).
+  - Writes frames to video file in `.mp4` format
+  - Dispalys frames in real-time display window
+ 
+- **Exception Handling and Cleanup** (`try`/`finally`):
+  Gracefully handles interruptions (e.g., KeyboardInterrupt) and cleans up resources like the camera, display, and inference thread. Ensures the video writer is released and prints the final object counts along with the **PFS index** calculation.  
 
 ### Output
 
