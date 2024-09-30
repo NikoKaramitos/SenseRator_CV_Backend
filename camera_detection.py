@@ -7,6 +7,7 @@ import queue
 from collections import defaultdict
 import os
 import datetime
+import json
 
 # Load your custom-trained YOLOv8 model with ByteTrack
 model = YOLO('Final50Epochs.pt')
@@ -282,3 +283,32 @@ finally:
     print(f"Stop Sign Index:\t{stop_sign_score: .2f}")
     print(f"Tree Index:\t\t{tree_score: .2f}")
     print(f"Street Light Index:\t{street_light_score: .2f}")
+
+# Create JSON file to store scanned scores for region and video file => run db_connection.py
+# Directory where the scores will be saved
+scores_dir = "Scores"
+
+# Create the directory if it doesn't exist
+if not os.path.exists(scores_dir):
+    os.makedirs(scores_dir)
+
+# Gather score into a dictionary
+data = {
+    "pedestrian_flow_and_safety_index": pfs_score,
+    "sidewalk_index": sidewalk_score,
+    "crosswalk_index": crosswalk_score,
+    "traffic_light_index": traffic_light_score,
+    "stop_sign_index": stop_sign_score,
+    "tree_index": tree_score,
+    "street_light_index": street_light_score,
+    "video_file": video_filename
+}
+
+# Specify file name for JSON file
+json_filename = os.path.join(scores_dir, f'scores_{timestamp}.json')
+
+# Write the data to a JSON file
+with open(json_filename, 'w') as json_file:
+    json.dump(data, json_file, indent=4)
+
+print(f"\nScores and video data saved to {json_filename}")
