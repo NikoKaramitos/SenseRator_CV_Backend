@@ -292,8 +292,11 @@ scores_dir = "Scores"
 if not os.path.exists(scores_dir):
     os.makedirs(scores_dir)
 
+region_name = input("Please enter the name of the region being tested: \n")
+
 # Gather score into a dictionary
 data = {
+    "region_name": region_name,    
     "pedestrian_flow_and_safety_index": pfs_score,
     "sidewalk_index": sidewalk_score,
     "crosswalk_index": crosswalk_score,
@@ -305,7 +308,7 @@ data = {
 }
 
 # Specify file name for JSON file
-json_filename = os.path.join(scores_dir, f'scores_{timestamp}.json')
+json_filename = os.path.join(scores_dir, f'scores_{region_name}_{timestamp}.json')
 
 # Write the data to a JSON file
 with open(json_filename, 'w') as json_file:
