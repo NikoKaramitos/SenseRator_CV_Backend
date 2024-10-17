@@ -9,19 +9,32 @@ import os
 import datetime
 import json
 
+print("Initializing")
+region_name = input("Please enter the name of the region being tested: \n")
+
 # Load your custom-trained YOLOv8 model with ByteTrack
-model = YOLO('Final50Epochs.pt')
+model = YOLO('nano_480_res.pt')
 print("Model Loaded")
 
 # Initialize the camera and display
-camera = videoSource("csi://0", argv=["--input-width=640", "--input-height=480", "--framerate=20"])  # Default CSI camera source
+#camera = videoSource("csi://0", argv=["--input-width=640", "--input-height=480", "--framerate=20", "--exposuretimerange=50000 50000", "--aeLock=true"])  # Default CSI camera source
+camera = videoSource("v4l2:///dev/video1", argv=[
+    "--input-width=640",
+    "--input-height=480",
+    "--framerate=20",
+    "--timeout=30000",
+    "--exposuretimerange=1000 1000",
+    "--gainrange=1 1",
+    "--aelock=true",
+    "--focus-auto=true",
+])
 display = videoOutput("display://0")  # Display window
 
 # Create a queue to hold frames for inference
-frame_queue = queue.Queue(maxsize=4)  # Adjust maxsize as needed
+frame_queue = queue.Queue(maxsize=2)  # Adjust maxsize as needed
 
 # Variable to store the latest tracking results
-latest_results = None
+latest_results = None 
 results_lock = threading.Lock()
 
 # Initialize object count dictionary
@@ -33,7 +46,7 @@ track_ages = {}
 track_ages_lock = threading.Lock()
 
 # Set minimum track age for counting objects
-min_track_age = 2  # Adjust as needed
+min_track_age = 1 # Adjust as needed
 
 if not os.path.exists('videos'):
     os.makedirs('videos')
@@ -62,7 +75,7 @@ def compute_component_score(class_name, ids):
             score = 100
         
         sidewalk_score = score
-        score *= 0.25
+        score *= 0.3
 
     if class_name == 'Crosswalk':
         if num_objects >= 3:
@@ -75,14 +88,14 @@ def compute_component_score(class_name, ids):
         crosswalk_score = score
         score *= 0.2
     
-    if class_name == 'Traffic Light':
+    if class_name == 'traffic light':
         if num_objects >= 2:
             score = 100
         elif num_objects == 1:
             score = 50
         
         traffic_light_score = score
-        score *= 0.15
+        score *= 0.05
 
     if class_name == 'stop':
         if num_objects >= 2:
@@ -113,11 +126,12 @@ def compute_component_score(class_name, ids):
             score = 25
         
         street_light_score = score
-        score *= 0.15
+        score *= 0.2
     
     return score
 
 def inference_thread():
+    size = (480, 320)
     global latest_results
     while True:
         # Get a frame from the queue
@@ -126,12 +140,12 @@ def inference_thread():
             break  # Exit the thread if None is received
 
         # Resize image for faster inference
-        resized_img = cv2.resize(np_img, (320, 256))
+        resized_img = cv2.resize(np_img, size)
 
         # Run inference with ByteTrack for tracking
         results = model.track(
             resized_img,
-            imgsz=(320, 256),
+            imgsz=size,
             conf=0.1,
             persist=True,
             tracker="bytetrack.yaml"  # Use ByteTrack for tracking
@@ -180,8 +194,7 @@ def inference_thread():
                             # Only count the object if it meets the minimum age
                             if track_ages[track_id] >= min_track_age:
                                 tracked_ids.add(track_id)
-                                with object_counts_lock:
-                                    object_counts[class_name].add(track_id)  # Add ID to counts
+                                object_counts[class_name].add(track_id)  # Add ID to counts
                                 print(f"Counting ID: {track_id}, Class: {class_name}, Age: {track_ages[track_id]}")
 
                     tracked_objects.append((track_id, class_name, int(x1), int(y1), int(x2), int(y2), conf))
@@ -199,7 +212,7 @@ thread.start()
 
 # Generate a unique filename using timestamp
 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-video_filename = f'videos/output_{timestamp}.mp4'
+video_filename = f'videos/video_{region_name}_{timestamp}.mp4'
 
 # Define the codec and create VideoWriter object for .mp4 format
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -209,7 +222,7 @@ try:
     # Run the camera loop
     while display.IsStreaming():
 
-        # Capture frame from the camera
+       # Capture frame from the camera
         try:
             img = camera.Capture()
             if img is None:
@@ -292,7 +305,7 @@ scores_dir = "Scores"
 if not os.path.exists(scores_dir):
     os.makedirs(scores_dir)
 
-region_name = input("Please enter the name of the region being tested: \n")
+
 
 # Gather score into a dictionary
 data = {
