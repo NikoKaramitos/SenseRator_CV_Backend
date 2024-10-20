@@ -16,10 +16,15 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
    Computes safety-related indices based on the detected objects, providing insights into pedestrian safety.
 - **Video Recording:**
    Records the video stream with object annotations and saves it to the `videos/` directory in `.mp4` format without overwriting previous recordings.
+- **JSON File Creation:**
+   Creates a `JSON` file for database usage that includes all scoring metrics of most recent run named by user input.
 
 ### Requirements
 - **Hardware:**
-  - Jetson Nano or compatible device with a CSI camera.
+  - Jetson Nano or compatible device with a USB connected camera.
+    - For our Project we used the [RunCam2](https://shop.runcam.com/runcam2/)
+  - Bike Mounts for the Jetson and Camera
+    - We used 3D printed and hardware assembled pieces to attatch the Jetson
 - **Software:**
   - Python 3.8+
   - JetPack 4.6 or newer
@@ -33,7 +38,7 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
 1. **Install Dependencies:**  
    First, make sure you have the necessary Python dependencies:
    ```
-    pip install ultralytics opencv-python numpy
+    pip install -r requirements.txt
    ```
 2. **Set Up Jetson Utilities:**  
   Follow [NVIDIA's documentation](https://github.com/dusty-nv/jetson-utils) `(dusty-nv)` to install and set up `jetson_utils` for video capture and display on Jetson devices.
@@ -43,8 +48,12 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
     git clone https://github.com/NikoKaramitos/SenseRator2.0.git
     cd SenseRator2.0
   ``` 
-4. **Prepare the YOLOv8 Model:**  
-Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project directory.
+5. **Prepare the YOLOv8 Model:**  
+  Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project directory.
+
+6. **Create a Camera Matrix:**
+   Follow steps from [Nico Nielson's Youtube Video](https://www.youtube.com/watch?v=_-BTKiamRTg&t=3s) and [Nico Nielson Camera Matrix Github](https://github.com/niconielsen32/CameraCalibration/tree/main)
+   - will need to create an `images/` directory in the project directory and use `calibration.py` & `getImages.py` inside of the `bin/` directory
 
 ### Usage  
 
@@ -53,7 +62,7 @@ Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project direc
     Simply run the Python script to start detecting, tracking, and recording video:  
   
     ```
-       python camera_detection.py
+       python3 camera_detection.py
     ```
     The application will start the video stream, perform object detection and tracking, and calculate various safety indices based on detected objects.
 
@@ -67,14 +76,17 @@ Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project direc
 
 ### Code Structure
 
-- `camera = videoSource("csi://0", ...)` & `display = videoOutput("display://0"):`    
+- `camera = videoSource("v4l2://dev/video0", ...)` & `display = videoOutput("display://0"):`    
   Initializes the camera feed from the CSI camera and sets up the display window for real-time video rendering.
   
-- `frame_queue = queue.Queue(maxsize=4):`  
+- `frame_queue = queue.Queue(maxsize=2):`  
   A queue is created to hold frames before sending them for inference. The `maxsize` ensures that frames are processed without overloading the system, and new frames are dropped if the queue is full.
+
+- `cameraMatrix` & `Undistortion:`
+  Computes a new camera matrix based on distortion of the `RunCam2` lens and undistors the image prior to running inference thread on each frame. This allows distorted lines to be straightened and is crucial to detections and tracking accuracy.
   
 - `inference_thread():`  
-  Runs object detection and tracking on each frame taken from `frame_queue`. It resizes the frame for faster inference and processes the results using ByteTrack to maintain object tracking across frames. Tracked objects are stored, including their bounding boxes, class labels, and confidence scores. The track ages are managed to ensure that only sufficiently tracked objects are counted.
+  Runs object detection and tracking on each **now undistorted** frame taken from `frame_queue`. It resizes the frame for faster inference and processes the results using ByteTrack to maintain object tracking across frames. Tracked objects are stored, including their bounding boxes, class labels, and confidence scores. The track ages are managed to ensure that only sufficiently tracked objects are counted.
   
 - `thread = threading.Thread(target=inference_thread, daemon=True):`  
   Starts the inference thread in the background to handle detection and tracking concurrently with video rendering.
@@ -102,6 +114,7 @@ Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project direc
 
 - **Console Output:** The program prints the object counts, detection confidence scores, tracking IDs, and the final calculated safety indices.
 - **Video Output:** Annotated video streams with object bounding boxes and IDs are saved as `.mp4` files in the `videos/` directory.
+- **JSON File Output:** Calculated scores and individual scoring metrics are saved in the `Scores/` directory with the `Region Name` and timestamp to indicate it.
 
 ### Example
 
@@ -129,10 +142,45 @@ Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project direc
   Street Light Index:    75.00
   ```
   
-  The annotated video will be saved in the `videos/` folder.
+  The annotated video will be saved in the `videos/` directory.
 
+## JSON File Creation
 
+When the scores are calculated and displayed in the terminal, simultaneously a `JSON` file will be created with all scores and region data necessary for display on our website.
 
+The JSON file will look similar to this:
+
+  ```
+  scores_<REGION_NAME>_<TIMESTAMP>.json
+  
+  {
+    "region_name": "REGION_NAME",
+    "pedestrian_flow_and_safety_index": "55",
+    "sidewalk_index": "100",
+    "crosswalk_index": "0",
+    "traffic_light_index": "0",
+    "stop_sign_index": "50",
+    "tree_index": "75",
+    "street_light_index": "50",
+    "video_file": "videos/video_<REGION_NAME>_<TIMESTAMP>.mp4",
+  }
+  ```
+
+The `JSON` file will be created inside the `Scores/` directory
+
+## Database Connection
+Upon completion of collecting data, you can now send your JSON data directly to the web app for [SenseRator2.0](https://senstest.netlify.app/) where the scores will be uploaded to their respective region, dependent on `Region Name`.
+
+In order to do this, you need to update `line 10` in `db_connection.py` to include the correct path to the `Scores/scores_<REGION_NAME>_<TIMESTAMP>.json` file that corresponds to your selected region data.
+
+**run using this command:**
+  ```
+    python3 bin/db_connection.py
+  ```
+Upon successful database update, the terminal output will reference the ID that the data is stored under inside the database, for example:
+  ```
+  Data successfully stored under ID: -09ektvqH9JiDMoeXCX
+  ```
 ## Dataset Augmentation and YOLOv8 Training
 
 This script is the dataset augmentation pipeline and custom training setup for YOLOv8 models.   The script combines multiple datasets, remaps the labels, applies   augmentations, and prepares the data for YOLOv8 training.
