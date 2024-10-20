@@ -8,9 +8,14 @@ from collections import defaultdict
 import os
 import datetime
 import json
+import pickle
+import time
 
 print("Initializing")
 region_name = input("Please enter the name of the region being tested: \n")
+
+frame_times = []
+start_time = time.time()
 
 # Load your custom-trained YOLOv8 model with ByteTrack
 model = YOLO('nano_480_res.pt')
@@ -18,15 +23,17 @@ print("Model Loaded")
 
 # Initialize the camera and display
 #camera = videoSource("csi://0", argv=["--input-width=640", "--input-height=480", "--framerate=20", "--exposuretimerange=50000 50000", "--aeLock=true"])  # Default CSI camera source
-camera = videoSource("v4l2:///dev/video1", argv=[
+camera = videoSource("v4l2:///dev/video0", argv=[
     "--input-width=640",
     "--input-height=480",
     "--framerate=20",
     "--timeout=30000",
-    "--exposuretimerange=1000 1000",
-    "--gainrange=1 1",
+    #"--exposuretimerange=1000 1000",
+    #"--gainrange=1 1",
     "--aelock=true",
     "--focus-auto=true",
+    "--input-codec=mjpeg",
+    #"--buffer-size=4"
 ])
 display = videoOutput("display://0")  # Display window
 
@@ -50,6 +57,23 @@ min_track_age = 1 # Adjust as needed
 
 if not os.path.exists('videos'):
     os.makedirs('videos')
+
+# Load camera calibration data
+cameraMatrix = pickle.load(open("cameraMatrix.pkl", "rb"))
+dist = pickle.load(open("dist.pkl", "rb"))
+
+frameSize = (640, 480)  # Set the frame size matching your video input
+
+# Compute the optimal new camera matrix
+newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, frameSize, 1, frameSize)
+
+# Compute undistort map
+mapx, mapy = cv2.initUndistortRectifyMap(cameraMatrix, dist, None, newCameraMatrix, frameSize, 5)
+
+x, y, w, h = roi
+
+if w == 0 or h == 0:
+    w, h = frameSize
 
 # Initialize feature scores
 crosswalk_score = 0
@@ -78,8 +102,10 @@ def compute_component_score(class_name, ids):
         score *= 0.3
 
     if class_name == 'Crosswalk':
-        if num_objects >= 3:
+        if num_objects >= 4:
             score = 100
+        elif num_objects == 3:
+            score = 75
         elif num_objects == 2:
             score = 50
         elif num_objects == 1:
@@ -98,29 +124,31 @@ def compute_component_score(class_name, ids):
         score *= 0.05
 
     if class_name == 'stop':
-        if num_objects >= 2:
+        if num_objects >= 3:
             score = 100
-        elif num_objects == 1:
+        elif num_objects in (1, 2):
             score = 50
             
         stop_sign_score = score
         score *= 0.15
 
     if class_name == 'tree':
-        if num_objects >= 6:
+        if num_objects >= 10:
             score = 100
-        elif num_objects in (4, 5):
+        elif num_objects in (8, 9):
+            score = 75
+        elif num_objects in (4, 7):
             score = 50
-        elif num_objects >= 1:
+        elif num_objects in (1, 3):
             score = 25
             
         tree_score = score
         score *= 0.1
 
     if class_name == 'Street_Light':
-        if num_objects >= 3:
+        if num_objects >= 5:
             score = 100
-        elif num_objects == 2:
+        elif num_objects in (2, 4):
             score = 50
         elif num_objects == 1:
             score = 25
@@ -216,12 +244,12 @@ video_filename = f'videos/video_{region_name}_{timestamp}.mp4'
 
 # Define the codec and create VideoWriter object for .mp4 format
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-video_writer = cv2.VideoWriter(video_filename, fourcc, 20.0, (640, 480))
+video_writer = cv2.VideoWriter(video_filename, fourcc, 9, (w, h))
 
 try:
     # Run the camera loop
     while display.IsStreaming():
-
+        frame_start_time = time.time()
        # Capture frame from the camera
         try:
             img = camera.Capture()
@@ -233,6 +261,13 @@ try:
 
         # Convert the captured image from CUDA to NumPy
         np_img = cudaToNumpy(img)
+
+        # Undistort the image
+        np_img = cv2.remap(np_img, mapx, mapy, cv2.INTER_LINEAR)
+
+        # Optionally, crop the image (if you computed ROI)
+        x, y, w, h = roi
+        np_img = np_img[y:y+h, x:x+w]
 
         # Try to add the frame to the queue for inference
         try:
@@ -256,6 +291,10 @@ try:
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
         
         np_img_rgb = cv2.cvtColor(np_img, cv2.COLOR_BGR2RGB)
+
+        frame_end_time = time.time()
+        frame_duration = frame_end_time - frame_start_time
+        frame_times.append(frame_duration)
 
         # Write the frame to the video file
         video_writer.write(np_img_rgb)
@@ -328,3 +367,8 @@ with open(json_filename, 'w') as json_file:
     json.dump(data, json_file, indent=4)
 
 print(f"\nScores and video data saved to {json_filename}")
+
+if frame_times:
+    average_frame_duration = sum(frame_times) / len(frame_times)
+    average_fps = 1 / average_frame_duration
+    print(f"Average FPS: {average_fps:.2f}")
