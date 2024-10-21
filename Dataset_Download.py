@@ -6,13 +6,13 @@ import yaml
 import random
 from sklearn.model_selection import train_test_split
 
-rf = Roboflow(api_key="YOUR_API_KEY")
+rf = Roboflow(api_key="w4mrNrULGB7H1w4CzREi")
 
 project = rf.workspace("yolo-jr9fm").project("crosswalks-zn9wq")
 version = project.version(2)
 dataset = version.download("yolov8")
 
-project = rf.workspace("jjkim5108").project("trafic_lights_detection-wlpzd")
+project = rf.workspace("education-ngbb7").project("traffic-light-detection-txkag")
 version = project.version(1)
 dataset = version.download("yolov8")
 
