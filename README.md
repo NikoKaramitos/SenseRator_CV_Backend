@@ -53,7 +53,7 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
     cd SenseRator2.0
   ```
 5. **Train a custom YOLOv8 Model**
-   Import desired datasets from Roboflow and run the Dataset_Combining.py script with updated label names and file paths to train a custom YOLOv8 model.
+   Import desired datasets from Roboflow using your API_KEY and run the Dataset_Combining.py script with updated label names and file paths to train a custom YOLOv8 model.
   
 7. **Prepare the YOLOv8 Model:**  
   Place your custom-trained YOLOv8 model `(YourModel.pt)` or the provided trained models `(Final50Epochs.pt)` or `(nano_480_res.pt)` in the project directory.
