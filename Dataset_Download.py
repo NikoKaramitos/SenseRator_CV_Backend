@@ -6,7 +6,7 @@ import yaml
 import random
 from sklearn.model_selection import train_test_split
 
-rf = Roboflow(api_key="w4mrNrULGB7H1w4CzREi")
+rf = Roboflow(api_key="YOURAPIKEY")
 
 project = rf.workspace("yolo-jr9fm").project("crosswalks-zn9wq")
 version = project.version(2)
