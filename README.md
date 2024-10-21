@@ -4,6 +4,10 @@
 This project utilizes a custom-trained YOLOv8 model for real-time object detection and tracking with video stream recording. The primary application is detecting various street-level objects (e.g., sidewalks, crosswalks, traffic lights, stop signs, etc.) and calculating safety-related indices to determine a **Pedestrian Flow Safety (PFS) index** based on detected objects.
 
 ### Features
+- **Dataset Importing from Roboflow**
+  Find custom datasets on Roboflow to import and use to train a custom YOLOv8 model.
+- **Dataset Combining and Training**
+  Imported datasets will be combined into one dataset automatically to train a YOLOv8 model.
 - **Object Detection and Tracking:**
   Detects and tracks multiple objects using a YOLOv8 model with ByteTrack for object tracking.
 - **Real-time Inference:**
@@ -47,11 +51,14 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
   ```
     git clone https://github.com/NikoKaramitos/SenseRator2.0.git
     cd SenseRator2.0
-  ``` 
-5. **Prepare the YOLOv8 Model:**  
-  Place your custom-trained YOLOv8 model `(Final50Epochs.pt)` in the project directory.
+  ```
+5. **Train a custom YOLOv8 Model**
+   Import desired datasets from Roboflow and run the Dataset_Combining.py script with updated label names and file paths to train a custom YOLOv8 model.
+  
+7. **Prepare the YOLOv8 Model:**  
+  Place your custom-trained YOLOv8 model `(YourModel.pt)` or the provided trained models `(Final50Epochs.pt)` or `(nano_480_res.pt)` in the project directory.
 
-6. **Create a Camera Matrix:**
+8. **Create a Camera Matrix:**
    Follow steps from [Nico Nielson's Youtube Video](https://www.youtube.com/watch?v=_-BTKiamRTg&t=3s) and [Nico Nielson Camera Matrix Github](https://github.com/niconielsen32/CameraCalibration/tree/main)
    - will need to create an `images/` directory in the project directory and use `calibration.py` & `getImages.py` inside of the `bin/` directory
 
