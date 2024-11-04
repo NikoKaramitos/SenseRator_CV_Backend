@@ -133,20 +133,20 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
   ...
   Final Object Counts:
   Crosswalk: 3
-  Sidewalk: 2
-  Traffic Light: 1
+  Sidewalk: 5
+  Benches: 10
   Stop Sign: 0
   Tree: 6
-  Street Light: 2
+  Street Light: 
   
-  Pedestrian Flow Safety Index: 85.50
+  Pedestrian Flow Safety Index: 78.00
   =====================================
-  Sidewalk Index:        100.00
-  Crosswalk Index:       80.00
-  Traffic Light Index:   50.00
+  Sidewalk Index:        25.00
+  Crosswalk Index:       12.00
+  Bench Index:           15.00
   Stop Sign Index:       0.00
-  Tree Index:            100.00
-  Street Light Index:    75.00
+  Tree Index:            6.00
+  Street Light Index:    20.00
   ```
   
   The annotated video will be saved in the `videos/` directory.
@@ -162,13 +162,13 @@ The JSON file will look similar to this:
   
   {
     "region_name": "REGION_NAME",
-    "pedestrian_flow_and_safety_index": "55",
-    "sidewalk_index": "100",
-    "crosswalk_index": "0",
-    "traffic_light_index": "0",
-    "stop_sign_index": "50",
-    "tree_index": "75",
-    "street_light_index": "50",
+    "pedestrian_flow_and_safety_index": 78,
+    "sidewalk_index": 25,
+    "crosswalk_index": 12,
+    "bench_index": 15,
+    "stop_sign_index": 0,
+    "tree_index": 6,
+    "street_light_index": 20,
     "video_file": "videos/video_<REGION_NAME>_<TIMESTAMP>.mp4",
   }
   ```
