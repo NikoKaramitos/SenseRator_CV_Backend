@@ -18,7 +18,7 @@ frame_times = []
 start_time = time.time()
 
 # Load your custom-trained YOLOv8 model with ByteTrack
-model = YOLO('nano_480_res.pt')
+model = YOLO('FinalNano.pt')
 print("Model Loaded")
 
 # Initialize the camera and display
@@ -35,10 +35,11 @@ camera = videoSource("v4l2:///dev/video0", argv=[
     "--input-codec=mjpeg",
     #"--buffer-size=4"
 ])
-display = videoOutput("display://0")  # Display window
+
+display = videoOutput("display://0")
 
 # Create a queue to hold frames for inference
-frame_queue = queue.Queue(maxsize=2)  # Adjust maxsize as needed
+frame_queue = queue.Queue(maxsize=2)
 
 # Variable to store the latest tracking results
 latest_results = None 
@@ -53,7 +54,7 @@ track_ages = {}
 track_ages_lock = threading.Lock()
 
 # Set minimum track age for counting objects
-min_track_age = 1 # Adjust as needed
+min_track_age = 1
 
 if not os.path.exists('videos'):
     os.makedirs('videos')
@@ -62,7 +63,8 @@ if not os.path.exists('videos'):
 cameraMatrix = pickle.load(open("cameraMatrix.pkl", "rb"))
 dist = pickle.load(open("dist.pkl", "rb"))
 
-frameSize = (640, 480)  # Set the frame size matching your video input
+# Set the frame size matching your video input
+frameSize = (640, 480) 
 
 # Compute the optimal new camera matrix
 newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, frameSize, 1, frameSize)
@@ -78,7 +80,7 @@ if w == 0 or h == 0:
 # Initialize feature scores
 crosswalk_score = 0
 sidewalk_score = 0
-traffic_light_score = 0
+bench_score = 0
 street_light_score = 0
 stop_sign_score = 0
 tree_score = 0
@@ -89,72 +91,64 @@ def compute_component_score(class_name, ids):
     score = 0
     global crosswalk_score
     global sidewalk_score
-    global traffic_light_score
+    global bench_score
     global street_light_score
     global stop_sign_score
     global tree_score
 
     if class_name == 'sidewalk':
-        if num_objects >= 1:
-            score = 100
+        if num_objects >= 5:
+            score = 25
+        else:
+            for i in range(num_objects):
+                score += 5
         
         sidewalk_score = score
-        score *= 0.3
 
     if class_name == 'Crosswalk':
-        if num_objects >= 4:
-            score = 100
-        elif num_objects == 3:
-            score = 75
-        elif num_objects == 2:
-            score = 50
-        elif num_objects == 1:
-            score = 25
+        if num_objects >= 5:
+            score = 20
+        else:
+            for i in range(num_objects):
+                score += 4
         
         crosswalk_score = score
-        score *= 0.2
     
-    if class_name == 'traffic light':
-        if num_objects >= 2:
-            score = 100
-        elif num_objects == 1:
-            score = 50
+    if class_name == 'Bench':
+        if num_objects >= 10:
+            score = 15
+        else:
+            for i in range(num_objects):
+                score += 1.5
         
-        traffic_light_score = score
-        score *= 0.05
+        bench_score = score
 
     if class_name == 'stop':
-        if num_objects >= 3:
-            score = 100
-        elif num_objects in (1, 2):
-            score = 50
+        if num_objects >= 2:
+            score = 10
+        else:
+            for i in range(num_objects):
+                score += 5
             
         stop_sign_score = score
-        score *= 0.15
 
     if class_name == 'tree':
         if num_objects >= 10:
-            score = 100
-        elif num_objects in (8, 9):
-            score = 75
-        elif num_objects in (4, 7):
-            score = 50
-        elif num_objects in (1, 3):
-            score = 25
+            score = 10
+        else:
+            for i in range(num_objects):
+                score += 1
             
         tree_score = score
-        score *= 0.1
 
     if class_name == 'Street_Light':
-        if num_objects >= 5:
-            score = 100
-        elif num_objects in (2, 4):
-            score = 50
-        elif num_objects == 1:
-            score = 25
+        if num_objects >= 10:
+            score = 20
+        else:
+            for i in range(num_objects):
+                score += 2
         
         street_light_score = score
-        score *= 0.2
     
     return score
 
@@ -165,7 +159,7 @@ def inference_thread():
         # Get a frame from the queue
         np_img = frame_queue.get()
         if np_img is None:
-            break  # Exit the thread if None is received
+            break
 
         # Resize image for faster inference
         resized_img = cv2.resize(np_img, size)
@@ -176,7 +170,7 @@ def inference_thread():
             imgsz=size,
             conf=0.1,
             persist=True,
-            tracker="bytetrack.yaml"  # Use ByteTrack for tracking
+            tracker="bytetrack.yaml"
         )
 
         # Scale bounding boxes back to original image size
@@ -185,14 +179,14 @@ def inference_thread():
 
         # Prepare tracking results for display
         tracked_objects = []
-        tracked_ids = set()  # To keep track of unique IDs seen this frame
+        tracked_ids = set() 
 
         for result in results:
             boxes = result.boxes
             if boxes is not None and len(boxes) > 0:
                 for box in boxes:
                     if box.xyxy is None or len(box.xyxy) == 0:
-                        continue  # Skip this detection
+                        continue
 
                     # Get bounding box coordinates and class info
                     x1, y1, x2, y2 = box.xyxy[0].tolist()
@@ -213,16 +207,16 @@ def inference_thread():
                     if track_id is not None:
                         with track_ages_lock:
                             if track_id in track_ages:
-                                track_ages[track_id] += 1  # Increment age
+                                track_ages[track_id] += 1
                                 print(f"Tracking ID: {track_id}, Age: {track_ages[track_id]}")
                             else:
-                                track_ages[track_id] = 1  # Initialize age
+                                track_ages[track_id] = 1
                                 print(f"New track detected: ID: {track_id}, Class: {class_name}")
 
                             # Only count the object if it meets the minimum age
                             if track_ages[track_id] >= min_track_age:
                                 tracked_ids.add(track_id)
-                                object_counts[class_name].add(track_id)  # Add ID to counts
+                                object_counts[class_name].add(track_id)
                                 print(f"Counting ID: {track_id}, Class: {class_name}, Age: {track_ages[track_id]}")
 
                     tracked_objects.append((track_id, class_name, int(x1), int(y1), int(x2), int(y2), conf))
@@ -273,7 +267,7 @@ try:
         try:
             frame_queue.put_nowait(np_img.copy())
         except queue.Full:
-            pass  # Skip adding the frame if the queue is full
+            pass
 
         # Get the latest tracking results
         with results_lock:
@@ -310,7 +304,7 @@ except KeyboardInterrupt:
 
 finally:
     # Clean up
-    frame_queue.put(None)  # Signal the inference thread to exit
+    frame_queue.put(None)
     thread.join()
     camera.Close()
     display.Close()
@@ -321,7 +315,7 @@ finally:
     print("\nFinal Object Counts:")
     with object_counts_lock:
         for class_name, ids in object_counts.items():
-            print(f"{class_name}: {len(ids)}")  # Show count of unique IDs for each class
+            print(f"{class_name}: {len(ids)}")
 
             # Calculate the score for the Pedestrian Flow Safety Index
             pfs_score += compute_component_score(class_name, ids)
@@ -331,7 +325,7 @@ finally:
     print("=====================================")
     print(f"Sidewalk Index:\t\t{sidewalk_score: .2f}")
     print(f"Crosswalk Index:\t{crosswalk_score: .2f}")
-    print(f"Traffic Light Index:\t{traffic_light_score: .2f}")
+    print(f"Bench Index:\t\t{bench_score: .2f}")
     print(f"Stop Sign Index:\t{stop_sign_score: .2f}")
     print(f"Tree Index:\t\t{tree_score: .2f}")
     print(f"Street Light Index:\t{street_light_score: .2f}")
@@ -344,15 +338,13 @@ scores_dir = "Scores"
 if not os.path.exists(scores_dir):
     os.makedirs(scores_dir)
 
-
-
 # Gather score into a dictionary
 data = {
     "region_name": region_name,    
     "pedestrian_flow_and_safety_index": pfs_score,
     "sidewalk_index": sidewalk_score,
     "crosswalk_index": crosswalk_score,
-    "traffic_light_index": traffic_light_score,
+    "bench_index": bench_score,
     "stop_sign_index": stop_sign_score,
     "tree_index": tree_score,
     "street_light_index": street_light_score,
@@ -368,6 +360,7 @@ with open(json_filename, 'w') as json_file:
 
 print(f"\nScores and video data saved to {json_filename}")
 
+# Calculate average framerate over live video feed
 if frame_times:
     average_frame_duration = sum(frame_times) / len(frame_times)
     average_fps = 1 / average_frame_duration
