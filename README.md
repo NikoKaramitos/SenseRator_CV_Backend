@@ -56,7 +56,7 @@ This project utilizes a custom-trained YOLOv8 model for real-time object detecti
    Import desired datasets from Roboflow using your API_KEY and run the Dataset_Combining.py script with updated label names and file paths to train a custom YOLOv8 model.
   
 7. **Prepare the YOLOv8 Model:**  
-  Place your custom-trained YOLOv8 model `(YourModel.pt)` or the provided trained models `(Final50Epochs.pt)` or `(nano_480_res.pt)` in the project directory.
+  Place your custom-trained YOLOv8 model `(YourModel.pt)` or the provided trained models `(FinalNano.pt)` in the project directory.
 
 8. **Create a Camera Matrix:**
    Follow steps from [Nico Nielson's Youtube Video](https://www.youtube.com/watch?v=_-BTKiamRTg&t=3s) and [Nico Nielson Camera Matrix Github](https://github.com/niconielsen32/CameraCalibration/tree/main)
