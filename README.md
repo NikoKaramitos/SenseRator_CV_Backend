@@ -1,4 +1,10 @@
 # SenseRator2.0: 
+
+## Check Out our Web Application & its Github
+- [SenseRator.com](https://develop--senstest.netlify.app)
+
+- [SenseRator Web App Github](https://github.com/AbdullahALX/sensTest)
+
 ## YOLOv8 Object Detection and Tracking Project
 
 This project utilizes a custom-trained YOLOv8 model for real-time object detection and tracking with video stream recording. The primary application is detecting various street-level objects (e.g., sidewalks, crosswalks, traffic lights, stop signs, etc.) and calculating safety-related indices to determine a **Pedestrian Flow Safety (PFS) index** based on detected objects.
