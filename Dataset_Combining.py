@@ -26,7 +26,7 @@ def augment_image(image):
 # Class mapping based on combined data.yaml
 class_mapping = {
     'Crosswalk': 0,
-    'traffic light': 1,
+    'Bench': 1,
     'regulatory': 2,
     'stop': 3,
     'warning': 4,
@@ -53,7 +53,7 @@ def remap_labels(label_path, original_mapping):
 
 # Sample original mappings for each dataset
 crosswalks_original_mapping = {0: 'Crosswalk'}
-traffic_lights_original_mapping = {0: 'traffic light'}
+bench_original_mapping = {0: 'Bench'}
 us_road_signs_original_mapping = {0: 'regulatory', 1: 'stop', 2: 'warning'}
 trees_original_mapping = {0: 'tree'}
 sidewalk_original_mapping = {0: 'sidewalk'}
@@ -61,12 +61,12 @@ street_light_original_mapping = {0: 'Street_Light'}
 
 # List of datasets and their mappings
 datasets_info = [
-    {'path': '/home/al921245/Documents/Training/crosswalks-2/train', 'mapping': crosswalks_original_mapping},
-    {'path': '/home/al921245/Documents/Training/traffic-light-detection-1/train', 'mapping': traffic_lights_original_mapping},
-    {'path': '/home/al921245/Documents/Training/US-Road-Signs-72/train', 'mapping': us_road_signs_original_mapping},
-    {'path': '/home/al921245/Documents/Training/Tree-Detection-1/train', 'mapping': trees_original_mapping},
-    {'path': '/home/al921245/Documents/Training/sidewalk-1/train', 'mapping': sidewalk_original_mapping},
-    {'path': '/home/al921245/Documents/Training/Lighting-3/train', 'mapping': street_light_original_mapping}
+    {'path': 'PATHTO/SenseRator-2.0-Crosswalks-3/train', 'mapping': crosswalks_original_mapping},
+    {'path': 'PATHTO/SenseRator-2.0-Benches-2/train', 'mapping': bench_original_mapping},
+    {'path': 'PATHTO/US-Road-Signs-72/train', 'mapping': us_road_signs_original_mapping},
+    {'path': 'PATHTO/Tree-Detection-1/train', 'mapping': trees_original_mapping},
+    {'path': 'PATHTO/sidewalk-1/train', 'mapping': sidewalk_original_mapping},
+    {'path': 'PATHTO/SenseRator-2.0-Street_Lights-2/train', 'mapping': street_light_original_mapping}
 ]
 
 # Function to select and augment images
@@ -78,7 +78,7 @@ def select_and_augment_images(dataset_info, num_images, augment_factor=2):
     label_dir = os.path.join(dataset_path, 'labels')
 
     # Get all images in the dataset
-    all_images = [f for f in os.listdir(image_dir) if f.endswith('.jpg') or f.endswith('.JPG')]
+    all_images = [f for f in os.listdir(image_dir) if f.endswith('.jpg') or f.endswith('.jpeg') or f.endswith('.png')]
 
     # Randomly select the desired number of images
     selected_images = random.sample(all_images, min(num_images, len(all_images)))
@@ -153,18 +153,18 @@ print("Datasets combined, labels remapped, augmented, and split successfully!")
 
 data_config = {
     'nc': 8,
-    'names': ['Crosswalk', 'traffic light', 'regulatory', 'stop', 'warning', 'tree', 'sidewalk', 'Street_Light'],
-    'train': '/home/al921245/Documents/Training/combined_dataset/images/train',
-    'val': '/home/al921245/Documents/Training/combined_dataset/images/val'
+    'names': ['Crosswalk', 'Bench', 'regulatory', 'stop', 'warning', 'tree', 'sidewalk', 'Street_Light'],
+    'train': 'PATHTO/combined_dataset/images/train',
+    'val': 'PATHTO/combined_dataset/images/val'
 }
 
 # Save the config to a YAML file
-with open('/home/al921245/Documents/Training/combined_dataset/data.yaml', 'w') as yaml_file:
+with open('PATHTO/combined_dataset/data.yaml', 'w') as yaml_file:
     yaml.dump(data_config, yaml_file, default_flow_style=False)
 
 print("data.yaml file created successfully!")
 
-data_yaml_path = '/home/al921245/Documents/Training/combined_dataset/data.yaml'
+data_yaml_path = 'PATHTO/combined_dataset/data.yaml'
 
 model = YOLO('yolov8n.pt')
 results = model.train(data = data_yaml_path, epochs = 50, imgsz = (480, 320))
