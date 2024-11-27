@@ -1,9 +1,9 @@
 # SenseRator2.0: 
 
 ## Check Out our Web Application & its Github
-- [SenseRator.com](https://develop--senstest.netlify.app)
+- [SenseRator.com](https://senserator2.netlify.app/)
 
-- [SenseRator Web App Github](https://github.com/AbdullahALX/sensTest)
+- [SenseRator Web App Github](https://github.com/SenseRatorUCF/SenseRator_WebApp.git)
 
 ## YOLOv8 Object Detection and Tracking Project
 
